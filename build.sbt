@@ -9,8 +9,8 @@ description := """Generate untyped scala.reflect.Manifest instances at Runtime i
 lazy val commonSettings = Seq(
   organization := "com.github.deaktator",
   scalaVersion := "2.10.5",
-//  crossScalaVersions := Seq("2.11.7", "2.10.6"),
-//  crossPaths := true,
+  crossScalaVersions := Seq(),
+  crossPaths := false, // TODO: Set to true when cross building.
   incOptions := incOptions.value.withNameHashing(true),
   javacOptions ++= Seq("-Xlint:unchecked"),
   resolvers ++= Seq(
@@ -22,7 +22,6 @@ lazy val commonSettings = Seq(
     "-deprecation",
     "-feature",
     "-Yinline",
-//    "-Yinline-warnings", // Eliminate inline warnings from in scala library.
     "-Yclosure-elim",
     "-Ydead-code",
     "-Xverify",
@@ -47,30 +46,9 @@ lazy val commonSettings = Seq(
   }
 )
 
-// ====================   Disable packaging root project   ====================
-//  Paul P: http://stackoverflow.com/a/25653777
-// Keys.`package` :=  file("")
-
-// packageBin in Global :=  file("")
-
-// packagedArtifacts :=  Map()
-// ====================   Disable packaging root project   ====================
-
 lazy val root = project.in( file(".") ).
-//  aggregate(pops241).
   settings(commonSettings: _*).
-//  settings ()
-//
-//lazy val pops241 = project.in( file("pops-2.4.1") ).
-//  settings(commonSettings: _*).
   settings (
-//    name := "pops-241",
-
-    // Because 2.10 runtime reflection is not thread-safe, tests relying on scala
-    // reflection can fail non-deterministically.  Uncheck to disallow tests to
-    // run in parallel.
-//    parallelExecution in Test := false,
-
     libraryDependencies ++= Seq(
       // TEST dependencies
       "org.scalatest" %% "scalatest" % "2.2.6" % "test"
@@ -107,7 +85,7 @@ pomExtra in Global := (
 
 import ReleaseTransformations._
 
-releaseCrossBuild := true
+releaseCrossBuild := false // TODO: Set to true when cross building.
 
 releaseProcess := Seq[ReleaseStep](
   checkSnapshotDependencies,
