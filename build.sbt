@@ -10,7 +10,7 @@ lazy val commonSettings = Seq(
   organization := "com.github.deaktator",
   scalaVersion := "2.10.5",
   crossScalaVersions := Seq(),
-  crossPaths := false, // TODO: Set to true when cross building.
+  crossPaths := true,
   incOptions := incOptions.value.withNameHashing(true),
   javacOptions ++= Seq("-Xlint:unchecked"),
   resolvers ++= Seq(
@@ -85,7 +85,7 @@ pomExtra in Global := (
 
 import ReleaseTransformations._
 
-releaseCrossBuild := false // TODO: Set to true when cross building.
+releaseCrossBuild := true
 
 releaseProcess := Seq[ReleaseStep](
   checkSnapshotDependencies,
