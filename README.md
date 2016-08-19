@@ -1,7 +1,13 @@
 # scala-runtime-manifest [![Build Status](https://travis-ci.org/deaktator/scala-runtime-manifest.svg?branch=master)](https://travis-ci.org/deaktator/scala-runtime-manifest) [[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.deaktator/scala-runtime-manifest/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.deaktator/scala-runtime-manifest)](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22com.github.deaktator%22) #
 
 [scala-runtime-manifest](https://github.com/deaktator/scala-runtime-manifest) generates 
-untyped scala.reflect.Manifest instances at Runtime in Scala 2.10.
+untyped `scala.reflect.Manifest[_]` instances at Runtime in Scala 2.10.
+
+This can be useful in situations when using Scala 2.10.x where a `Manifest` needs to be created
+outside of the Scala compiler.  This can be useful in interop code.  For instance, when calling 
+from Java into a Scala library whose API requires a `Manifest`.  Typically, this is somewhat of a 
+pain but this little library makes it easy to produce a `Manifest`.
+
 
 ## Import into your project
 
