@@ -60,7 +60,6 @@ lazy val root = project.in( file(".") ).
 sonatypeProfileName := "com.github.deaktator"
 
 pomExtra in Global := (
-    <url>https://github.com/deaktator/scala-runtime-manifest</url>
     <licenses>
       <license>
         <name>MIT License</name>
