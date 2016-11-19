@@ -135,24 +135,26 @@ class ManifestParserTest extends FlatSpec with Matchers {
   it should "fail with an appropriate message on a non-existent parameterized class" in {
     val err = ManifestParser.parse("a.B.X[java.lang.String]").left.get
 
+    println(s"\n\n$err\n\n")
+
     val exp =
       """
-        |Problem at character 23:
+        |Problem at character 5:
         |'a.B.X[java.lang.String]
-        |                        ^
+        |      ^
         |class a.B.X couldn't be parsed: java.lang.ClassNotFoundException: a.B.X
       """.stripMargin.trim
     assert(err == exp)
   }
 
   "Parsed unparameterized manifest strings" should "produces a Manifest equal to a compiler-generated one." in {
-    assert(ManifestParser.classManifest("java.lang.String").get == manifest[String])
+    assert(ManifestParser.classManifest(Class.forName("java.lang.String")) == manifest[String])
   }
 
   "Parsed array manifest strings" should "produce a Manifest equal to a compiler-generated one." in {
     assert(ManifestParser.parse("Array[java.lang.String]") == Right(manifest[String].arrayManifest))
 
-    val s = ManifestParser.classManifest("java.lang.String").get
+    val s = ManifestParser.classManifest(Class.forName("java.lang.String"))
     assert(ManifestParser.arrayManifest(s) == manifest[String].arrayManifest)
   }
 
@@ -160,9 +162,9 @@ class ManifestParserTest extends FlatSpec with Matchers {
     val mis = manifest[Iterable[String]]
     val ss = "java.lang.String"
     val si = "scala.collection.Iterable"
-    val sm = ManifestParser.classManifest(ss).get
-    val m = ManifestParser.parameterizedManifest(si, Seq(sm))
-    assert(m.get == mis)
+    val sm = ManifestParser.classManifest(Class.forName(ss))
+    val m = ManifestParser.parameterizedManifest(Class.forName(si), Seq(sm))
+    assert(m == mis)
     assert(ManifestParser.parse(s"$si[$ss]").right.get == mis)
   }
 

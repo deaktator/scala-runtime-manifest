@@ -76,23 +76,20 @@ object ManifestParser {
     /**
       * Production rule for manifests with (possibly multiple) type parameters.
       */
-    private[manifest] lazy val withArg = handleClassManifestErrors (
-      path ~ (oBracket ~> rep1sep(manifest, ",") <~ cBracket) ^^ {
-        case p ~ params => (p, ManifestParser.parameterizedManifest(p, params))
+    private[manifest] lazy val withArg =
+      clss ~ (oBracket ~> rep1sep(manifest, ",") <~ cBracket) ^^ {
+        case c ~ params => parameterizedManifest(c, params)
       }
-    )
 
     /**
       * Production rule for Array types.
       * Arrays can only have one type parameter.
       */
-    private[manifest] lazy val array = arrayToken ~> oBracket ~> manifest <~ cBracket ^^ { ManifestParser.arrayManifest }
+    private[manifest] lazy val array = arrayToken ~> oBracket ~> manifest <~ cBracket ^^ { arrayManifest }
 
-    private[manifest] lazy val noArg = special | classManifest
+    private[manifest] lazy val noArg = special | classMan
 
-    private[manifest] lazy val classManifest = handleClassManifestErrors (
-      path ^^ { p => (p, ManifestParser.classManifest(p)) }
-    )
+    private[manifest] lazy val classMan = clss ^^ { classManifest }
 
     private[manifest] lazy val special = opt(scalaPkg) ~> (obj | anyRef | anyVal | any | nothing | anyVals)
 
@@ -114,6 +111,9 @@ object ManifestParser {
     private[manifest] lazy val short   = "Short"   ^^^ ManifestFactory.Short
     private[manifest] lazy val unit    = "Unit"    ^^^ ManifestFactory.Unit
 
+    private[manifest] lazy val clss =
+      path ^^ { p => (p, ManifestParser.stringToClass(p)) } ^? (classSuccess, classError)
+
     private[manifest] lazy val path = """[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*""".r
     private[manifest] lazy val oBracket = "["
     private[manifest] lazy val cBracket = "]"
@@ -124,21 +124,41 @@ object ManifestParser {
       */
     // TODO: Determine if the '^' prefix is necessary.
     private[manifest] lazy val arrayToken = """^(scala\.)?Array""".r
-
-    private[manifest] def handleClassManifestErrors(p: Parser[(String, Try[Manifest[_]])]) = {
-      p ^? (ManifestParser.classManifestSuccess, ManifestParser.classManifestError)
-    }
   }
 
   /**
     * Create a `Manifest` for an unparameterized class.
-    * @param tpe string representation of the type.
+    * @param c Class to turn into a Manifest.
     * @return
     */
-  private[manifest] def classManifest(tpe: String): Try[Manifest[_]] = {
-    stringToClass(tpe).map(c => ManifestFactory.classType(c))
+  private[manifest] def classManifest(c: Class[_]): Manifest[_] = ManifestFactory.classType(c)
+
+  /**
+    * Create a `Array` `Manifest` from a Manifest.
+    * @param tpe a manifest for the element type.
+    * @return
+    */
+  private[manifest] def arrayManifest(tpe: Manifest[_]) = ManifestFactory.arrayType(tpe)
+
+  /**
+    * Create a `Manifest` for a parameterized type given a string representation of a type constructor and
+    * a sequence of `Manifest`s, one for each type parameter.
+    * @param clss Class for the type constructor
+    * @param typeParams Manifests for each type parameter.
+    * @return
+    */
+  private[manifest] def parameterizedManifest(clss: Class[_], typeParams: Seq[Manifest[_]]): Manifest[_] = {
+    val (first, rest) = typeParams.splitAt(1)
+    ManifestFactory.classType(clss, first.head, rest:_*)
   }
 
+  /**
+    * Try to turn a String into a Class.  If it doesn't work, repeatedly try to change the last '.' into
+    * a '$' until no more progress can be made.  If the String cannot successfully be turned into a Class,
+    * return the first error encountered.
+    * @param tpe a String to turn into a Class.
+    * @return
+    */
   private[manifest] def stringToClass(tpe: String): Try[Class[_]] = {
     @tailrec def retry(origEx: ClassNotFoundException, tpe: String): Try[Class[_]] = {
       // Use old-style try/catch so the function is tail recursive.
@@ -160,34 +180,18 @@ object ManifestParser {
     Try { Class.forName(tpe) }.recoverWith { case e: ClassNotFoundException => retry(e, tpe) }
   }
 
-  private[manifest] val classManifestSuccess: PartialFunction[(String, Try[Manifest[_]]), Manifest[_]] = {
-    case (p, Success(cm)) => cm
+  private[manifest] val classSuccess: PartialFunction[(String, Try[Class[_]]), Class[_]] = {
+    case (p, Success(c)) => c
   }
 
-  private[manifest] val classManifestError: ((String, Try[Manifest[_]])) => String = {
-    case (p, tm) =>
-      val e = tm.failed.get
+  /**
+    * This is only called
+    */
+  private[manifest] val classError: ((String, Try[Class[_]])) => String = {
+    case (p, tc) =>
+      // We know it failed if this function is called after classSuccess.  Therefore, we don't need to
+      // worry about it being successful.
+      val e = tc.failed.get
       s"class $p couldn't be parsed: ${e.getClass.getCanonicalName}: ${e.getMessage}"
-  }
-
-  /**
-    * Create a `Array` `Manifest` from a Manifest.
-    * @param tpe a manifest for the element type.
-    * @return
-    */
-  private[manifest] def arrayManifest(tpe: Manifest[_]) = ManifestFactory.arrayType(tpe)
-
-  /**
-    * Create a `Manifest` for a parameterized type given a string representation of a type constructor and
-    * a sequence of `Manifest`s, one for each type parameter.
-    * @param tpe string representation for the type constructor
-    * @param typeParams Manifests for each type parameter.
-    * @return
-    */
-  private[manifest] def parameterizedManifest(tpe: String, typeParams: Seq[Manifest[_]]): Try[Manifest[_]] = {
-    stringToClass(tpe) map { clas =>
-      val (first, rest) = typeParams.splitAt(1)
-      ManifestFactory.classType(clas, first.head, rest:_*)
-    }
   }
 }
