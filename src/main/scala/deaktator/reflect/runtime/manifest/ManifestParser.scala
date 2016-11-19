@@ -35,7 +35,7 @@ object ManifestParser {
   def parse(strRep: CharSequence): Either[String, Manifest[_]] = {
     import Grammar.{Success => PSuccess, Error => PError, Failure => PFailure}
 
-    Grammar.parseAll(Grammar.manifests, strRep) match {
+    Grammar.parseAll(Grammar.root, strRep) match {
       case PSuccess(man, _)    => Right(man)
       case PError(err, next)   => Left(errorMsg(strRep, err, next))
       case PFailure(err, next) => Left(errorMsg(strRep, err, next))
@@ -64,17 +64,20 @@ object ManifestParser {
 
     /**
       * The root production rule.
-      * This is typed for two reasons:
-     - ''it is the root production''
-     - `withArg` ''and'' `array` ''rules refer to this rule, making it recursively thereby necessitating the type.''
       */
-    lazy val manifests: Parser[Manifest[_]] = array | withArg | noArg
+    lazy val root: Parser[Manifest[_]] = phrase(manifest)
+
+    /**
+      * The main manifest production rule.  It is typed because `withArg` ''and'' `array`
+      * ''production refer to this one, making it recursive, and thereby necessitating the type.''
+      */
+    private[manifest] lazy val manifest: Parser[Manifest[_]] = array | withArg | noArg
 
     /**
       * Production rule for manifests with (possibly multiple) type parameters.
       */
-    lazy val withArg = handleClassManifestErrors (
-      path ~ (oBracket ~> rep1sep(manifests, ",") <~ cBracket) ^^ {
+    private[manifest] lazy val withArg = handleClassManifestErrors (
+      path ~ (oBracket ~> rep1sep(manifest, ",") <~ cBracket) ^^ {
         case p ~ params => (p, ManifestParser.parameterizedManifest(p, params))
       }
     )
@@ -83,46 +86,46 @@ object ManifestParser {
       * Production rule for Array types.
       * Arrays can only have one type parameter.
       */
-    lazy val array = arrayToken ~> oBracket ~> manifests <~ cBracket ^^ { ManifestParser.arrayManifest }
+    private[manifest] lazy val array = arrayToken ~> oBracket ~> manifest <~ cBracket ^^ { ManifestParser.arrayManifest }
 
-    lazy val noArg = special | classManifest
+    private[manifest] lazy val noArg = special | classManifest
 
-    lazy val classManifest = handleClassManifestErrors (
+    private[manifest] lazy val classManifest = handleClassManifestErrors (
       path ^^ { p => (p, ManifestParser.classManifest(p)) }
     )
 
-    lazy val special = opt(scalaPkg) ~> (obj | anyRef | anyVal | any | nothing | anyVals)
+    private[manifest] lazy val special = opt(scalaPkg) ~> (obj | anyRef | anyVal | any | nothing | anyVals)
 
-    lazy val obj     = "Object"  ^^^ ManifestFactory.Object
-    lazy val any     = "Any"     ^^^ ManifestFactory.Any
-    lazy val anyVal  = "AnyVal"  ^^^ ManifestFactory.AnyVal
-    lazy val anyRef  = "AnyRef"  ^^^ ManifestFactory.AnyRef
-    lazy val nothing = "Nothing" ^^^ ManifestFactory.Nothing
+    private[manifest] lazy val obj     = "Object"  ^^^ ManifestFactory.Object
+    private[manifest] lazy val any     = "Any"     ^^^ ManifestFactory.Any
+    private[manifest] lazy val anyVal  = "AnyVal"  ^^^ ManifestFactory.AnyVal
+    private[manifest] lazy val anyRef  = "AnyRef"  ^^^ ManifestFactory.AnyRef
+    private[manifest] lazy val nothing = "Nothing" ^^^ ManifestFactory.Nothing
 
-    lazy val anyVals = boolean | byte | char | double | float | int | long | short | unit
+    private[manifest] lazy val anyVals = boolean | byte | char | double | float | int | long | short | unit
 
-    lazy val boolean = "Boolean" ^^^ ManifestFactory.Boolean
-    lazy val byte    = "Byte"    ^^^ ManifestFactory.Byte
-    lazy val char    = "Char"    ^^^ ManifestFactory.Char
-    lazy val double  = "Double"  ^^^ ManifestFactory.Double
-    lazy val float   = "Float"   ^^^ ManifestFactory.Float
-    lazy val int     = "Int"     ^^^ ManifestFactory.Int
-    lazy val long    = "Long"    ^^^ ManifestFactory.Long
-    lazy val short   = "Short"   ^^^ ManifestFactory.Short
-    lazy val unit    = "Unit"    ^^^ ManifestFactory.Unit
+    private[manifest] lazy val boolean = "Boolean" ^^^ ManifestFactory.Boolean
+    private[manifest] lazy val byte    = "Byte"    ^^^ ManifestFactory.Byte
+    private[manifest] lazy val char    = "Char"    ^^^ ManifestFactory.Char
+    private[manifest] lazy val double  = "Double"  ^^^ ManifestFactory.Double
+    private[manifest] lazy val float   = "Float"   ^^^ ManifestFactory.Float
+    private[manifest] lazy val int     = "Int"     ^^^ ManifestFactory.Int
+    private[manifest] lazy val long    = "Long"    ^^^ ManifestFactory.Long
+    private[manifest] lazy val short   = "Short"   ^^^ ManifestFactory.Short
+    private[manifest] lazy val unit    = "Unit"    ^^^ ManifestFactory.Unit
 
-    lazy val path = """[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*""".r
-    lazy val oBracket = "["
-    lazy val cBracket = "]"
-    lazy val scalaPkg = """(scala\.)?""".r
+    private[manifest] lazy val path = """[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*""".r
+    private[manifest] lazy val oBracket = "["
+    private[manifest] lazy val cBracket = "]"
+    private[manifest] lazy val scalaPkg = """(scala\.)?""".r
 
     /**
       * An array token should only match the remaining input starting from its beginning.
       */
     // TODO: Determine if the '^' prefix is necessary.
-    lazy val arrayToken = """^(scala\.)?Array""".r
+    private[manifest] lazy val arrayToken = """^(scala\.)?Array""".r
 
-    private def handleClassManifestErrors(p: Parser[(String, Try[Manifest[_]])]) = {
+    private[manifest] def handleClassManifestErrors(p: Parser[(String, Try[Manifest[_]])]) = {
       p ^? (ManifestParser.classManifestSuccess, ManifestParser.classManifestError)
     }
   }
