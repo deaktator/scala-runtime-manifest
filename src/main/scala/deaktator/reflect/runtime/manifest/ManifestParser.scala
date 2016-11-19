@@ -185,12 +185,12 @@ object ManifestParser {
   }
 
   /**
-    * This is only called
+    * This is only called if classSuccess fails.  Therefore, the Try is a Failure.
     */
   private[manifest] val classError: ((String, Try[Class[_]])) => String = {
     case (p, tc) =>
-      // We know it failed if this function is called after classSuccess.  Therefore, we don't need to
-      // worry about it being successful.
+      // We know it failed if this function is called after classSuccess.  Therefore, we
+      // don't need to worry about it being successful.
       val e = tc.failed.get
       s"class $p couldn't be parsed: ${e.getClass.getCanonicalName}: ${e.getMessage}"
   }
