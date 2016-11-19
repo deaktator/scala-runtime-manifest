@@ -35,16 +35,10 @@ object ManifestParser {
   def parse(strRep: CharSequence): Either[String, Manifest[_]] = {
     import Grammar.{Success => PSuccess, Error => PError, Failure => PFailure}
 
-    try {
-      Grammar.parseAll(Grammar.manifests, strRep) match {
-        case PSuccess(man, _)    => Right(man)
-        case PError(err, next)   => Left(errorMsg(strRep, err, next))
-        case PFailure(err, next) => Left(errorMsg(strRep, err, next))
-      }
-    }
-    catch {
-      case ex: ClassNotFoundException =>
-        Left(s"For $strRep, class not found: ${ex.getMessage}")
+    Grammar.parseAll(Grammar.manifests, strRep) match {
+      case PSuccess(man, _)    => Right(man)
+      case PError(err, next)   => Left(errorMsg(strRep, err, next))
+      case PFailure(err, next) => Left(errorMsg(strRep, err, next))
     }
   }
 
@@ -79,21 +73,23 @@ object ManifestParser {
     /**
       * Production rule for manifests with (possibly multiple) type parameters.
       */
-    lazy val withArg = path ~ (oBracket ~> rep1sep(manifests, ",") <~ cBracket) ^^ {
-      case p ~ params => ManifestParser.parameterizedManifest(p, params)
-    }
+    lazy val withArg = handleClassManifestErrors (
+      path ~ (oBracket ~> rep1sep(manifests, ",") <~ cBracket) ^^ {
+        case p ~ params => (p, ManifestParser.parameterizedManifest(p, params))
+      }
+    )
 
     /**
       * Production rule for Array types.
       * Arrays can only have one type parameter.
       */
-    lazy val array = arrayToken ~> oBracket ~> manifests <~ cBracket ^^ {
-      ManifestParser.arrayManifest
-    }
+    lazy val array = arrayToken ~> oBracket ~> manifests <~ cBracket ^^ { ManifestParser.arrayManifest }
 
     lazy val noArg = special | classManifest
 
-    lazy val classManifest = path ^^ { ManifestParser.classManifest }
+    lazy val classManifest = handleClassManifestErrors (
+      path ^^ { p => (p, ManifestParser.classManifest(p)) }
+    )
 
     lazy val special = opt(scalaPkg) ~> (obj | anyRef | anyVal | any | nothing | anyVals)
 
@@ -125,6 +121,10 @@ object ManifestParser {
       */
     // TODO: Determine if the '^' prefix is necessary.
     lazy val arrayToken = """^(scala\.)?Array""".r
+
+    private def handleClassManifestErrors(p: Parser[(String, Try[Manifest[_]])]) = {
+      p ^? (ManifestParser.classManifestSuccess, ManifestParser.classManifestError)
+    }
   }
 
   /**
@@ -132,9 +132,8 @@ object ManifestParser {
     * @param tpe string representation of the type.
     * @return
     */
-  private[manifest] def classManifest(tpe: String): Manifest[_] = {
-    //    ManifestFactory.classType(Class.forName(tpe))
-    ManifestFactory.classType(stringToClass(tpe).get)
+  private[manifest] def classManifest(tpe: String): Try[Manifest[_]] = {
+    stringToClass(tpe).map(c => ManifestFactory.classType(c))
   }
 
   private[manifest] def stringToClass(tpe: String): Try[Class[_]] = {
@@ -158,6 +157,16 @@ object ManifestParser {
     Try { Class.forName(tpe) }.recoverWith { case e: ClassNotFoundException => retry(e, tpe) }
   }
 
+  private[manifest] val classManifestSuccess: PartialFunction[(String, Try[Manifest[_]]), Manifest[_]] = {
+    case (p, Success(cm)) => cm
+  }
+
+  private[manifest] val classManifestError: ((String, Try[Manifest[_]])) => String = {
+    case (p, tm) =>
+      val e = tm.failed.get
+      s"class $p couldn't be parsed: ${e.getClass.getCanonicalName}: ${e.getMessage}"
+  }
+
   /**
     * Create a `Array` `Manifest` from a Manifest.
     * @param tpe a manifest for the element type.
@@ -172,9 +181,10 @@ object ManifestParser {
     * @param typeParams Manifests for each type parameter.
     * @return
     */
-  private[manifest] def parameterizedManifest(tpe: String, typeParams: Seq[Manifest[_]]): Manifest[_] = {
-    val clas = stringToClass(tpe).get
-    val (first, rest) = typeParams.splitAt(1)
-    ManifestFactory.classType(clas, first.head, rest:_*)
+  private[manifest] def parameterizedManifest(tpe: String, typeParams: Seq[Manifest[_]]): Try[Manifest[_]] = {
+    stringToClass(tpe) map { clas =>
+      val (first, rest) = typeParams.splitAt(1)
+      ManifestFactory.classType(clas, first.head, rest:_*)
+    }
   }
 }

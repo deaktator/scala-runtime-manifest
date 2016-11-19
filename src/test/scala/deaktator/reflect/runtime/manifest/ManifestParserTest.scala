@@ -106,24 +106,53 @@ class ManifestParserTest extends FlatSpec with Matchers {
   }
 
   it should "correctly parse nested unparameterized static inner classes" in {
-    val m1 = ManifestParser.parse("a.B.C").right.get
-    val m2 = ManifestParser.parse("a.B.C.D").right.get
-    val m3 = ManifestParser.parse("a.B.C.D.E").right.get
+    ManifestParser.parse("a.B.C").right.get
+    ManifestParser.parse("a.B.C.D").right.get
+    ManifestParser.parse("a.B.C.D.E").right.get
+  }
+
+  it should "correctly parse nested unparameterized static private inner classes" in {
+    ManifestParser.parse("a.B.P").right.get
   }
 
   it should "correctly parse nested parameterized static inner classes" in {
-    val m1 = ManifestParser.parse("a.B.C.DP[Int]").right.get
-    val m2 = ManifestParser.parse("a.B.C.D.EP[a.B.C.DP[Double]]").right.get
+    ManifestParser.parse("a.B.C.DP[Int]").right.get
+    ManifestParser.parse("a.B.C.D.EP[a.B.C.DP[Double]]").right.get
+  }
+
+  it should "fail with an appropriate message on a non-existent class" in {
+    val err = ManifestParser.parse("a.B.X").left.get
+    val exp =
+      """
+        |Problem at character 5:
+        |'a.B.X
+        |      ^
+        |class a.B.X couldn't be parsed: java.lang.ClassNotFoundException: a.B.X
+      """.stripMargin.trim
+    assert(err == exp)
+  }
+
+  it should "fail with an appropriate message on a non-existent parameterized class" in {
+    val err = ManifestParser.parse("a.B.X[java.lang.String]").left.get
+
+    val exp =
+      """
+        |Problem at character 23:
+        |'a.B.X[java.lang.String]
+        |                        ^
+        |class a.B.X couldn't be parsed: java.lang.ClassNotFoundException: a.B.X
+      """.stripMargin.trim
+    assert(err == exp)
   }
 
   "Parsed unparameterized manifest strings" should "produces a Manifest equal to a compiler-generated one." in {
-    assert(ManifestParser.classManifest("java.lang.String") == manifest[String])
+    assert(ManifestParser.classManifest("java.lang.String").get == manifest[String])
   }
 
   "Parsed array manifest strings" should "produce a Manifest equal to a compiler-generated one." in {
     assert(ManifestParser.parse("Array[java.lang.String]") == Right(manifest[String].arrayManifest))
 
-    val s = ManifestParser.classManifest("java.lang.String")
+    val s = ManifestParser.classManifest("java.lang.String").get
     assert(ManifestParser.arrayManifest(s) == manifest[String].arrayManifest)
   }
 
@@ -131,9 +160,9 @@ class ManifestParserTest extends FlatSpec with Matchers {
     val mis = manifest[Iterable[String]]
     val ss = "java.lang.String"
     val si = "scala.collection.Iterable"
-    val sm = ManifestParser.classManifest(ss)
+    val sm = ManifestParser.classManifest(ss).get
     val m = ManifestParser.parameterizedManifest(si, Seq(sm))
-    assert(m == mis)
+    assert(m.get == mis)
     assert(ManifestParser.parse(s"$si[$ss]").right.get == mis)
   }
 
