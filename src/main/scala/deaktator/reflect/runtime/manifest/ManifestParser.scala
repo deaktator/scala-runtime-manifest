@@ -1,7 +1,9 @@
 package deaktator.reflect.runtime.manifest
 
+import scala.annotation.tailrec
 import scala.reflect.ManifestFactory
 import scala.util.parsing.combinator.RegexParsers
+import scala.util.{Try, Success, Failure}
 
 /**
   * Parser that takes string input and constructs `scala.reflect.Manifest` instances.
@@ -19,7 +21,6 @@ import scala.util.parsing.combinator.RegexParsers
   * @author deaktator
   */
 object ManifestParser {
-  import Grammar.{Success, Error, Failure}
 
   /**
     * Parse a string representation of a typed `Manifest`.
@@ -32,11 +33,13 @@ object ManifestParser {
     *         on the right
     */
   def parse(strRep: CharSequence): Either[String, Manifest[_]] = {
+    import Grammar.{Success => PSuccess, Error => PError, Failure => PFailure}
+
     try {
       Grammar.parseAll(Grammar.manifests, strRep) match {
-        case Success(man, _)    => Right(man)
-        case Error(err, next)   => Left(errorMsg(strRep, err, next))
-        case Failure(err, next) => Left(errorMsg(strRep, err, next))
+        case PSuccess(man, _)    => Right(man)
+        case PError(err, next)   => Left(errorMsg(strRep, err, next))
+        case PFailure(err, next) => Left(errorMsg(strRep, err, next))
       }
     }
     catch {
@@ -129,8 +132,31 @@ object ManifestParser {
     * @param tpe string representation of the type.
     * @return
     */
-  private[manifest] def classManifest(tpe: String): Manifest[_] =
-    ManifestFactory.classType(Class.forName(tpe))
+  private[manifest] def classManifest(tpe: String): Manifest[_] = {
+    //    ManifestFactory.classType(Class.forName(tpe))
+    ManifestFactory.classType(stringToClass(tpe).get)
+  }
+
+  private[manifest] def stringToClass(tpe: String): Try[Class[_]] = {
+    @tailrec def retry(origEx: ClassNotFoundException, tpe: String): Try[Class[_]] = {
+      // Use old-style try/catch so the function is tail recursive.
+
+      // Replace the last '.' with a '$'.
+      val newTpe = tpe.replaceFirst("""(\.)([^\.]+)$""", """\$$2""")
+      if (tpe == newTpe)
+        Failure(origEx)
+      else
+        try {
+          Success(Class.forName(newTpe))
+        }
+        catch {
+          case e: ClassNotFoundException => retry(origEx, newTpe)
+          case e: Throwable => Failure(e)
+        }
+    }
+
+    Try { Class.forName(tpe) }.recoverWith { case e: ClassNotFoundException => retry(e, tpe) }
+  }
 
   /**
     * Create a `Array` `Manifest` from a Manifest.
@@ -147,7 +173,7 @@ object ManifestParser {
     * @return
     */
   private[manifest] def parameterizedManifest(tpe: String, typeParams: Seq[Manifest[_]]): Manifest[_] = {
-    val clas = Class.forName(tpe)
+    val clas = stringToClass(tpe).get
     val (first, rest) = typeParams.splitAt(1)
     ManifestFactory.classType(clas, first.head, rest:_*)
   }

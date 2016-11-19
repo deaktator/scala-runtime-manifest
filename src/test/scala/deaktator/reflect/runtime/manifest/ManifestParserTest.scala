@@ -105,6 +105,17 @@ class ManifestParserTest extends FlatSpec with Matchers {
     }
   }
 
+  it should "correctly parse nested unparameterized static inner classes" in {
+    val m1 = ManifestParser.parse("a.B.C").right.get
+    val m2 = ManifestParser.parse("a.B.C.D").right.get
+    val m3 = ManifestParser.parse("a.B.C.D.E").right.get
+  }
+
+  it should "correctly parse nested parameterized static inner classes" in {
+    val m1 = ManifestParser.parse("a.B.C.DP[Int]").right.get
+    val m2 = ManifestParser.parse("a.B.C.D.EP[a.B.C.DP[Double]]").right.get
+  }
+
   "Parsed unparameterized manifest strings" should "produces a Manifest equal to a compiler-generated one." in {
     assert(ManifestParser.classManifest("java.lang.String") == manifest[String])
   }
