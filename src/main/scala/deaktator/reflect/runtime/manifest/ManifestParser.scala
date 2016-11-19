@@ -112,7 +112,7 @@ object ManifestParser {
     private[manifest] lazy val unit    = "Unit"    ^^^ ManifestFactory.Unit
 
     private[manifest] lazy val clss =
-      path ^^ { p => (p, ManifestParser.stringToClass(p)) } ^? (classSuccess, classError)
+      path ^^ { p => (p, stringToClass(p)) } ^? (classSuccess, classError)
 
     private[manifest] lazy val path = """[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*""".r
     private[manifest] lazy val oBracket = "["
