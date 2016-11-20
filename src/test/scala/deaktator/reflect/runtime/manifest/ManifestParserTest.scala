@@ -148,23 +148,17 @@ class ManifestParserTest extends FlatSpec with Matchers {
   }
 
   "Parsed unparameterized manifest strings" should "produces a Manifest equal to a compiler-generated one." in {
-    assert(ManifestParser.classManifest(Class.forName("java.lang.String")) == manifest[String])
+    assert(ManifestParser.parse("java.lang.String").right.get == manifest[String])
   }
 
   "Parsed array manifest strings" should "produce a Manifest equal to a compiler-generated one." in {
     assert(ManifestParser.parse("Array[java.lang.String]") == Right(manifest[String].arrayManifest))
-
-    val s = ManifestParser.classManifest(Class.forName("java.lang.String"))
-    assert(ManifestParser.arrayManifest(s) == manifest[String].arrayManifest)
   }
 
   "Parsed parameterized manifest strings" should "produce a Manifest equal to a compiler-generated one." in {
     val mis = manifest[Iterable[String]]
     val ss = "java.lang.String"
     val si = "scala.collection.Iterable"
-    val sm = ManifestParser.classManifest(Class.forName(ss))
-    val m = ManifestParser.parameterizedManifest(Class.forName(si), Seq(sm))
-    assert(m == mis)
     assert(ManifestParser.parse(s"$si[$ss]").right.get == mis)
   }
 
