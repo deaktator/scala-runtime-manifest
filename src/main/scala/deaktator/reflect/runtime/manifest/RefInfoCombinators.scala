@@ -7,41 +7,41 @@ import scala.language.higherKinds
   */
 trait RefInfoCombinators[RefInfo[_]] {
   /**
-    * Create a `Manifest` for an unparameterized class.
-    * @param c Class to turn into a Manifest.
+    * Create a `RefInfo` for an unparameterized class.
+    * @param c Class to turn into a `RefInfo.
     * @return
     */
-  protected[this] def classManifest(c: Class[_]): RefInfo[_]
+  def classManifest(c: Class[_]): RefInfo[_]
 
   /**
-    * Create a `Array` `Manifest` from a Manifest.
+    * Create a `RefInfo[Array[_]]` from a `RefInfo`.
     * @param tpe a manifest for the element type.
     * @return
     */
-  protected[this] def arrayManifest(tpe: RefInfo[_]): RefInfo[Array[Nothing]]
+  def arrayManifest(tpe: RefInfo[_]): RefInfo[Array[Nothing]]
 
   /**
-    * Create a `Manifest` for a parameterized type given a string representation of a type constructor and
-    * a sequence of `Manifest`s, one for each type parameter.
+    * Create a `RefInto` for a parameterized type given a Class of a type constructor and
+    * a sequence of `RefInfo`s, one for each type parameter.
     * @param clss Class for the type constructor
-    * @param typeParams Manifests for each type parameter.
+    * @param typeParams `RefInfo`s for each type parameter.
     * @return
     */
-  protected[this] def parameterizedManifest(clss: Class[_], typeParams: Seq[RefInfo[_]]): RefInfo[_]
+  def parameterizedManifest(clss: Class[_], typeParams: Seq[RefInfo[_]]): RefInfo[_]
 
-  protected[this] def objRI: RefInfo[Object]
-  protected[this] def anyRI: RefInfo[Any]
-  protected[this] def anyValRI: RefInfo[AnyVal]
-  protected[this] def anyRefRI: RefInfo[AnyRef]
-  protected[this] def nothingRI: RefInfo[Nothing]
+  def objRI: RefInfo[Object]
+  def anyRI: RefInfo[Any]
+  def anyValRI: RefInfo[AnyVal]
+  def anyRefRI: RefInfo[AnyRef]
+  def nothingRI: RefInfo[Nothing]
 
-  protected[this] def booleanRI: RefInfo[Boolean]
-  protected[this] def byteRI: RefInfo[Byte]
-  protected[this] def charRI: RefInfo[Char]
-  protected[this] def doubleRI: RefInfo[Double]
-  protected[this] def floatRI: RefInfo[Float]
-  protected[this] def intRI: RefInfo[Int]
-  protected[this] def longRI: RefInfo[Long]
-  protected[this] def shortRI: RefInfo[Short]
-  protected[this] def unitRI: RefInfo[Unit]
+  def booleanRI: RefInfo[Boolean]
+  def byteRI: RefInfo[Byte]
+  def charRI: RefInfo[Char]
+  def doubleRI: RefInfo[Double]
+  def floatRI: RefInfo[Float]
+  def intRI: RefInfo[Int]
+  def longRI: RefInfo[Long]
+  def shortRI: RefInfo[Short]
+  def unitRI: RefInfo[Unit]
 }

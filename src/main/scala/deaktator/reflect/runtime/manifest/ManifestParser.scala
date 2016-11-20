@@ -15,8 +15,7 @@ package deaktator.reflect.runtime.manifest
   *
   * @author deaktator
   */
-object ManifestParser extends RefInfoGrammar[Manifest]
-                         with ManifestCombinators {
+object ManifestParser  {
 
   /**
     * Given a String representation of a type, produce an untyped Manifest.
@@ -24,5 +23,10 @@ object ManifestParser extends RefInfoGrammar[Manifest]
     * @return a Manifest on the Right if successful and an error message on the left
     *         in the event of an error.
     */
-  def parse(strRep: CharSequence): Either[String, Manifest[_]] = parseToEither(strRep)
+  def parse(strRep: CharSequence): Either[String, Manifest[_]] = ManifestGrammar.parseToEither(strRep)
+
+  /** The final grammar for Manifests.  Package private for testing. */
+  private[manifest] object ManifestGrammar
+                    extends RefInfoGrammar[Manifest]
+                       with ManifestCombinators
 }
