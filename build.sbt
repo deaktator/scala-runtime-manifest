@@ -59,7 +59,6 @@ lazy val root = project.in( file(".") ).
   settings (
     libraryDependencies ++= Seq(
       // TEST dependencies
-      // 2.2.6
       "org.scalatest" %% "scalatest" % "3.0.1" % "test"
     ),
     libraryDependencies ++= {
