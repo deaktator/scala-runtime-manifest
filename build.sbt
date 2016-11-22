@@ -1,15 +1,17 @@
+import sbt.inc.IncOptions
+
 name := "scala-runtime-manifest"
 
 homepage := Some(url("https://github.com/deaktator/scala-runtime-manifest"))
 
 licenses := Seq("MIT License" -> url("http://opensource.org/licenses/MIT"))
 
-description := """Generate untyped scala.reflect.Manifest instances at Runtime in Scala 2.10.x."""
+description := """Generate untyped scala.reflect.Manifest instances from Strings at runtime in Scala 2.10.x, 2.11.x, 2.12.x."""
 
 lazy val commonSettings = Seq(
   organization := "com.github.deaktator",
-  scalaVersion := "2.10.5",
-  crossScalaVersions := Seq("2.10.5"),
+  scalaVersion := "2.11.8",
+  crossScalaVersions := Seq("2.10.5", "2.11.8", "2.12.0"),
   crossPaths := true,
   incOptions := incOptions.value.withNameHashing(true),
   javacOptions ++= Seq("-Xlint:unchecked"),
@@ -21,38 +23,51 @@ lazy val commonSettings = Seq(
     "-unchecked",
     "-deprecation",
     "-feature",
-    "-Yinline",
-    "-Yclosure-elim",
-    "-Ydead-code",
     "-Xverify",
     "-Ywarn-inaccessible",
     "-Ywarn-dead-code"
-  ),
+  )
+)
 
-  scalacOptions <++= scalaVersion map {
-    case v: String if v.split("\\.")(1).toInt >= 11 =>
-      Seq(
+lazy val versionDependentSettings = Seq(
+  scalacOptions ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, scalaMajor)) if scalaMajor == 10 => Seq(
+        "-Yinline",
+        "-Yclosure-elim",
+        "-Ydead-code"
+      )
+      case Some((2, scalaMajor)) if scalaMajor == 11 => Seq(
         "-Ywarn-unused",
         "-Ywarn-unused-import",
-
-        // These options don't play nice with IntelliJ.  Comment them out to debug.
-        "-Ybackend:GenBCode",
-        "-Ydelambdafy:method",
-        "-Yopt:l:project",
-        "-Yconst-opt"
+        "-Yinline",
+        "-Yclosure-elim",
+        "-Ydead-code"
       )
-    case _ =>
-      Seq()
+      case Some((2, scalaMajor)) if scalaMajor == 12 => Seq(
+        "-Ywarn-unused",
+        "-Ywarn-unused-import"
+      )
+      case _ => Seq()
+    }
   }
 )
 
 lazy val root = project.in( file(".") ).
   settings(commonSettings: _*).
+  settings(versionDependentSettings: _*).
   settings (
     libraryDependencies ++= Seq(
       // TEST dependencies
-      "org.scalatest" %% "scalatest" % "2.2.6" % "test"
-    )
+      "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+    ),
+    libraryDependencies ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, scalaMajor)) if scalaMajor >= 11 =>
+          Seq("org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4")
+        case Some((2, 10)) => Seq()
+      }
+    }
   )
 
 // ===========================   PUBLISHING   ===========================
