@@ -6,7 +6,7 @@ homepage := Some(url("https://github.com/deaktator/scala-runtime-manifest"))
 
 licenses := Seq("MIT License" -> url("http://opensource.org/licenses/MIT"))
 
-description := """Generate untyped scala.reflect.Manifest instances at Runtime in Scala 2.10.x."""
+description := """Generate untyped scala.reflect.Manifest instances from Strings at runtime in Scala 2.10.x, 2.11.x, 2.12.x."""
 
 lazy val commonSettings = Seq(
   organization := "com.github.deaktator",
@@ -29,7 +29,6 @@ lazy val commonSettings = Seq(
   )
 )
 
-// : Seq[Def.Setting[_]]
 lazy val versionDependentSettings = Seq(
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
@@ -41,18 +40,14 @@ lazy val versionDependentSettings = Seq(
       case Some((2, scalaMajor)) if scalaMajor == 11 => Seq(
         "-Ywarn-unused",
         "-Ywarn-unused-import",
-
-        // These options don't play nice with IntelliJ.  Comment them out to debug.
-        "-Ybackend:GenBCode",
-        "-Ydelambdafy:method",
-        "-Yopt:l:project",
-        "-Yconst-opt",
-
-        "-Yinline", // 2.12 doesn't like it.  Maybe it's -X in 2.12.
-        "-Yclosure-elim", // 2.12 doesn't like it.  Maybe it's -X in 2.12.
-        "-Ydead-code" // 2.12 doesn't like it.  Maybe it's -X in 2.12.
+        "-Yinline",
+        "-Yclosure-elim",
+        "-Ydead-code"
       )
-      case Some((2, scalaMajor)) if scalaMajor == 12 => Seq()
+      case Some((2, scalaMajor)) if scalaMajor == 12 => Seq(
+        "-Ywarn-unused",
+        "-Ywarn-unused-import"
+      )
       case _ => Seq()
     }
   }
