@@ -134,9 +134,6 @@ class ManifestParserTest extends FlatSpec with Matchers {
 
   it should "fail with an appropriate message on a non-existent parameterized class" in {
     val err = ManifestParser.parse("a.B.X[java.lang.String]").left.get
-
-    println(s"\n\n$err\n\n")
-
     val exp =
       """
         |Problem at character 5:

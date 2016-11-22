@@ -23,8 +23,7 @@ package deaktator.reflect.runtime
   * import scala.reflect.runtime.currentMirror
   * import scala.tools.reflect.ToolBox
   * val toolbox = currentMirror.mkToolBox()
-  * val wttString = "List[Double]"
-  * val exp = s"scala.reflect.runtime.universe.weakTypeTag[$wttString]"
+  * val exp = "scala.reflect.runtime.universe.weakTypeTag[List[Double]]"
   * val wtt = toolbox.eval(toolbox.parse(exp)).asInstanceOf[WeakTypeTag[_]]
   * }}}
   *

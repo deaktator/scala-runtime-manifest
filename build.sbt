@@ -1,3 +1,5 @@
+import sbt.inc.IncOptions
+
 name := "scala-runtime-manifest"
 
 homepage := Some(url("https://github.com/deaktator/scala-runtime-manifest"))
@@ -8,8 +10,8 @@ description := """Generate untyped scala.reflect.Manifest instances at Runtime i
 
 lazy val commonSettings = Seq(
   organization := "com.github.deaktator",
-  scalaVersion := "2.10.5",
-  crossScalaVersions := Seq("2.10.5"),
+  scalaVersion := "2.11.8",
+  crossScalaVersions := Seq("2.10.5", "2.11.8", "2.12.0"),
   crossPaths := true,
   incOptions := incOptions.value.withNameHashing(true),
   javacOptions ++= Seq("-Xlint:unchecked"),
@@ -21,17 +23,22 @@ lazy val commonSettings = Seq(
     "-unchecked",
     "-deprecation",
     "-feature",
-    "-Yinline",
-    "-Yclosure-elim",
-    "-Ydead-code",
     "-Xverify",
     "-Ywarn-inaccessible",
     "-Ywarn-dead-code"
-  ),
+  )
+)
 
-  scalacOptions <++= scalaVersion map {
-    case v: String if v.split("\\.")(1).toInt >= 11 =>
-      Seq(
+// : Seq[Def.Setting[_]]
+lazy val versionDependentSettings = Seq(
+  scalacOptions ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, scalaMajor)) if scalaMajor == 10 => Seq(
+        "-Yinline",
+        "-Yclosure-elim",
+        "-Ydead-code"
+      )
+      case Some((2, scalaMajor)) if scalaMajor == 11 => Seq(
         "-Ywarn-unused",
         "-Ywarn-unused-import",
 
@@ -39,20 +46,34 @@ lazy val commonSettings = Seq(
         "-Ybackend:GenBCode",
         "-Ydelambdafy:method",
         "-Yopt:l:project",
-        "-Yconst-opt"
+        "-Yconst-opt",
+
+        "-Yinline", // 2.12 doesn't like it.  Maybe it's -X in 2.12.
+        "-Yclosure-elim", // 2.12 doesn't like it.  Maybe it's -X in 2.12.
+        "-Ydead-code" // 2.12 doesn't like it.  Maybe it's -X in 2.12.
       )
-    case _ =>
-      Seq()
+      case Some((2, scalaMajor)) if scalaMajor == 12 => Seq()
+      case _ => Seq()
+    }
   }
 )
 
 lazy val root = project.in( file(".") ).
   settings(commonSettings: _*).
+  settings(versionDependentSettings: _*).
   settings (
     libraryDependencies ++= Seq(
       // TEST dependencies
-      "org.scalatest" %% "scalatest" % "2.2.6" % "test"
-    )
+      // 2.2.6
+      "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+    ),
+    libraryDependencies ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, scalaMajor)) if scalaMajor >= 11 =>
+          Seq("org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.4")
+        case Some((2, 10)) => Seq()
+      }
+    }
   )
 
 // ===========================   PUBLISHING   ===========================
