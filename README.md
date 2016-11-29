@@ -14,7 +14,7 @@ pain but this little library makes it easy to produce a `Manifest`.
 ```scala
 // In your build.sbt
 libraryDependencies ++= Seq(
-  "com.github.deaktator" %% "scala-runtime-manifest" % "0.0.1"
+  "com.github.deaktator" %% "scala-runtime-manifest" % "1.0.0"
 )
 ```
 
@@ -25,7 +25,7 @@ libraryDependencies ++= Seq(
 <dependency>
   <groupId>com.github.deaktator</groupId>
   <artifactId>scala-runtime-manifest_2.10</artifactId>
-  <version>0.0.1</version>
+  <version>1.0.0</version>
 </dependency>
 ```
 
