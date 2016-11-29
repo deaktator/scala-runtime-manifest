@@ -144,6 +144,18 @@ class ManifestParserTest extends FlatSpec with Matchers {
     assert(err == exp)
   }
 
+  it should "work correctly when called in parallel" in {
+    val pkg = "scala.collection.immutable."
+    val basicTypes = AnyVals ++ OtherPredefs
+    val seqTypes = Seq("List", "Seq", "Set", "Vector").map(c => s"$pkg$c") :+ "scala.collection.Seq"
+    val seqManStrs = for (s <- seqTypes; x <- basicTypes) yield s"$s[$x]"
+    val mapManStrs = for (k <- basicTypes; v <- basicTypes) yield s"scala.collection.immutable.Map[$k,$v]"
+    val allTypes = (seqManStrs ++ mapManStrs).toSeq.sorted
+    val seq = allTypes.map(s => ManifestParser.parse(s).right.get).toVector
+    val par = allTypes.par.map(s => ManifestParser.parse(s).right.get).toVector
+    assert(par == seq)
+  }
+
   "Parsed unparameterized manifest strings" should "produces a Manifest equal to a compiler-generated one." in {
     assert(ManifestParser.parse("java.lang.String").right.get == manifest[String])
   }
