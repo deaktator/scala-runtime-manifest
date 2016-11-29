@@ -31,7 +31,7 @@ libraryDependencies ++= Seq(
 <!-- In Maven pom.xml -->
 <dependency>
   <groupId>com.github.deaktator</groupId>
-  <artifactId>scala-runtime-manifest_2.10</artifactId>
+  <artifactId>scala-runtime-manifest_2.10</artifactId> <!-- OR _2.11 OR _2.12 -->
   <version>1.0.0</version>
 </dependency>
 ```
